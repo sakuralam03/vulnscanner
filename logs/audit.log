@@ -1,0 +1,18 @@
+# Audit Log
+
+The `logs/audit.log` file records every request made by the scanner.  
+It provides a timestamped trail of activity for reproducibility, ethics, and accountability.
+
+---
+
+## 🛠️ Purpose
+- **Transparency**: Show exactly what was sent and received.
+- **Accountability**: Demonstrate adherence to scope and ethics guardrails.
+- **Debugging**: Help troubleshoot unexpected responses or anomalies.
+- **Teaching**: Illustrate how probes differ from baseline requests.
+
+---
+
+## 📊 Log Format
+Each entry is written in plain text using Python’s `logging` module:
+
