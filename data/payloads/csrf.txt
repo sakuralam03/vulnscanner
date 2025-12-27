@@ -1,0 +1,7 @@
+# CSRF reference markers
+csrf_token
+authenticity_token
+
+# Expected headers
+Origin
+Referer

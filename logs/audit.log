@@ -16,3 +16,32 @@ It provides a timestamped trail of activity for reproducibility, ethics, and acc
 ## 📊 Log Format
 Each entry is written in plain text using Python’s `logging` module:
 
+
+- `YYYY-MM-DD HH:MM:SS,mmm` → Timestamp (UTC or local time depending on config)
+- `METHOD` → HTTP method (`GET`, `POST`)
+- `URL` → Full request URL
+- `STATUS` → HTTP status code or error message
+
+---
+
+## 📌 Example Entries
+2025-12-26 21:33:12,456 GET https://example.com/app/search?q=test  -> 200
+2025-12-26 21:33:13,002 GET https://example.com/app/search?q='  OR '1'='1 -> 500
+2025-12-26 21:33:15,789 POST https://example.com/app/update  -> ERROR: Permission denied (sandbox required)
+
+
+---
+
+## 🚦 Usage Notes
+- Logs are **append‑only**: do not edit or delete entries.
+- Review logs after each run to confirm:
+  - Scope was respected (only approved domains/paths).
+  - Payloads were non‑destructive.
+  - No unauthorized POST requests were made.
+- Keep logs as part of your **evidence package** alongside reports.
+
+---
+
+## ✅ Summary
+`audit.log` is your **flight recorder** ✈️ — it captures every probe with timestamps, methods, URLs, and outcomes.  
+It ensures scans are reproducible, ethical, and transparent.
