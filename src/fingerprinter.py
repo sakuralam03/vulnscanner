@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import re
 from urllib.parse import urljoin
 
 class Fingerprinter:
@@ -24,10 +23,9 @@ class Fingerprinter:
             return snapshot
 
         # --- Headers ---
-        headers = resp.headers
         for key in ["Server", "X-Powered-By"]:
-            if key in headers:
-                snapshot["headers"][key] = headers[key]
+            if key in resp.headers:
+                snapshot["headers"][key] = resp.headers[key]
 
         # --- Cookies ---
         for cookie in resp.cookies:
@@ -38,7 +36,7 @@ class Fingerprinter:
             }
 
         # --- Script sources ---
-        if "text/html" in headers.get("Content-Type", ""):
+        if "text/html" in resp.headers.get("Content-Type", ""):
             soup = BeautifulSoup(resp.text, "html.parser")
             for script in soup.find_all("script", src=True):
                 src = urljoin(url, script["src"])
@@ -77,5 +75,5 @@ class Fingerprinter:
 
 if __name__ == "__main__":
     fp = Fingerprinter()
-    fp.fingerprint("http://example.com")
+    fp.fingerprint("http://localhost:8080")
     fp.report()

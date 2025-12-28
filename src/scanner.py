@@ -213,5 +213,5 @@ class Scanner:
             json.dump(self.findings, f, indent=2)
 
 if __name__ == "__main__":
-    scanner = Scanner(base_url="https://example.com", scope_paths=["/app"])
+    scanner = Scanner(base_url="http://localhost:8080", scope_paths=["/app"])
     scanner.run()

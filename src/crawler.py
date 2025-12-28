@@ -95,7 +95,7 @@ class Crawler:
             self.queue.append((new_url, depth + 1))
 
 if __name__ == "__main__":
-    crawler = Crawler("http://example.com", mode="BFS", max_depth=2, max_pages=10, delay=0.5)
+    crawler = Crawler("http://localhost:8080", mode="BFS", max_depth=2, max_pages=10, delay=0.5)
     crawler.crawl()
 
     print("\n[forms discovered]")

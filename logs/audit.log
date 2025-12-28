@@ -45,3 +45,5 @@ Each entry is written in plain text using Python’s `logging` module:
 ## ✅ Summary
 `audit.log` is your **flight recorder** ✈️ — it captures every probe with timestamps, methods, URLs, and outcomes.  
 It ensures scans are reproducible, ethical, and transparent.
+2025-12-27 18:55:14,386 GET http://localhost:8080 -> 200
+2025-12-27 21:54:14,210 GET http://localhost:8080 -> 200
