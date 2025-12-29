@@ -1,199 +1,201 @@
-## dependencies 
-install requiremnets from requirements.txt
+🛡️ Vulnerability Scanner Pipeline
+A modular, educational vulnerability scanner built to analyze web applications like OWASP Juice Shop. This pipeline discovers endpoints, fingerprints technologies, injects payloads, interprets anomalies, and generates structured reports.
+
+📦 Dependencies
+Install all required Python packages:
+
+
+
+
+
 pip install -r requirements.txt
+🧪 Target: OWASP Juice Shop
+Run Juice Shop locally using Docker:
 
 
-## Regarding the site tested 
- OWASP Juice Shop
 
- Used docker to install and run it locally 
- ### Pull the official image
+
+
+# Pull the official image
 docker pull bkimminich/juice-shop
 
-### Run it on port 8080
+# Run it on port 8080
 docker run --rm -p 8080:3000 bkimminich/juice-shop
+Access it at: http://localhost:8080
 
-## Crawler
- discovers endpoints, forms, and JS routes.
+🧭 Crawler
+Purpose: Discover endpoints, forms, and JavaScript routes.
 
-Example: /rest/products/search with input q.
+Uses BFS/DFS to traverse links.
 
-This code crawls a site using BFS/DFS, normalizes URLs, and discovers links, forms, and JS routes.
+Normalizes URLs and extracts forms.
 
-It builds a list of probe targets (forms + routes).
+Builds a list of probe targets (e.g. /rest/products/search?q=).
 
-These targets are passed downstream to the vulnscanner pipeline.
+These targets are passed downstream to the scanner.
 
-In the final report, findings like “SQLi at /rest/products/search” are only possible because the crawler first discovered that endpoint and its q parameter.
-## Fingerprinter
+Example discovery: /rest/products/search with parameter q.
+
+🕵️ Fingerprinter
+Purpose: Collect passive evidence from each endpoint.
+
 1. Headers
-When the scanner does resp = requests.get(url), the server sends back HTTP response headers.
-
-Example:
-
-Code
+Extracts server metadata from resp.headers:
 
 
-HTTP/1.1 200 OK
+
+
+
 Server: Express
-Content-Type: text/html
-The Fingerprinter looks for keys like Server and X-Powered-By in resp.headers.
-
-That’s how it learned the backend is Express.js.
-
+X-Powered-By: Node.js
 2. Cookies
-The server may set cookies in the response (Set-Cookie header).
-
-The requests library parses them into resp.cookies.
-
-The Fingerprinter checks attributes:
-
-secure → whether cookie is flagged for HTTPS only.
-
-httponly → whether JavaScript can access it.
-
-samesite → whether it restricts cross‑site requests.
-
-That’s how it reported:
+Analyzes resp.cookies for security flags:
 
 
 
 
-
-{'token': {'secure': False, 'httponly': True, 'samesite': 'Lax'}}
+{
+  "token": {
+    "secure": false,
+    "httponly": true,
+    "samesite": "Lax"
+  }
+}
 3. Scripts
-If the response is HTML (Content-Type: text/html), the scanner parses it with BeautifulSoup.
+Parses HTML for <script src="..."> tags:
 
-It searches for <script src="..."> tags.
 
-Each script URL is collected and normalized with urljoin.
 
-Filenames like runtime.js, polyfills.js, vendor.js, main.js are typical of Angular/React/Vue build pipelines.
 
-That’s how the scanner inferred the frontend is a single‑page application (SPA).
 
-4. Errors
-The scanner scans the response body (resp.text) for known error signatures:
+<script src="runtime.js"></script>
+<script src="main.js"></script>
+Infers frontend tech (SPA frameworks like React/Angular/Vue).
 
-Database errors: ORA-, MySQL, PostgreSQL, SQLite.
+4. Error Signatures
+Scans resp.text for known backend errors:
 
-Stack traces: Exception, Traceback.
+ORA-, MySQL, PostgreSQL, SQLite
 
-In your case, none of these strings appeared in the homepage response, so Errors: [].
+Exception, Traceback
 
-How It’s Tracked
-All this evidence is stored in a snapshot dictionary for each URL:
+All evidence is stored as:
+
 
 
 
 
 self.evidence[url] = {
-    "headers": {...},
-    "cookies": {...},
-    "scripts": [...],
-    "errors": [...]
+  "headers": {...},
+  "cookies": {...},
+  "scripts": [...],
+  "errors": [...]
 }
-Later, the Reporter module merges this fingerprint evidence with vulnerability findings (like SQLi or XSS) to produce the final report.
+🧨 Harness
+Purpose: Inject payloads and observe anomalies.
 
-
-## Harness 
 1. Baseline Request
+Captures control response for comparison:
 
 
 
 
-def get_baseline(url, method="GET", params=None, data=None, headers=None):
-    ...
-    return resp.text, resp.status_code
-Sends a normal request (no payloads).
 
-Captures the response body and status code.
-
-This is the control sample used for comparison later.
-
+baseline_text, baseline_status = get_baseline(url, params)
 2. Payload Families
-
+python
 
 
 
 SQLI_PAYLOADS = ["' OR '1'='1", "' AND '1'='1", "' OR SLEEP(2)--"]
 XSS_PAYLOADS = ["<script>alert(1)</script>", "\" onmouseover=\"alert(1)", "';alert(1);//"]
-Defines harmless test payloads for SQL Injection and XSS.
-
-These are injected into parameters to see if the server behaves differently.
-
-⚠️ Note: the time‑based SQLi payload (SLEEP(2)) is throttled to avoid DoS.
-
 3. CSRF Checks
+Looks for CSRF tokens and missing headers:
+
+python
 
 
 
-def check_csrf_tokens(resp_text, headers):
-    if "csrf" in resp_text.lower(): ...
-    if "Origin" not in headers and "Referer" not in headers: ...
-Looks for CSRF tokens in the HTML.
-
-Checks if Origin/Referer headers are present.
-
-Adds hints about CSRF protection posture.
-
+check_csrf_tokens(resp.text, resp.headers)
 4. Matrix Generation
+Builds test cases by injecting payloads into each parameter:
 
 
 
 
-def build_param_matrix(endpoint, params):
-    for key in params.keys():
-        for payload in SQLI_PAYLOADS + XSS_PAYLOADS:
-            new_params = params.copy()
-            new_params[key] = payload
-            matrix.append(new_params)
-Builds a test matrix: for each parameter, substitute each payload.
-
-Example: if q=test, it generates:
 
 q="' OR '1'='1"
-
 q="<script>alert(1)</script>"
-
-etc.
-
 5. Harness Runner
+Sends each payload, compares response to baseline:
 
 
 
 
-def run_harness(endpoint, method="GET", params=None, ...):
-    baseline_text, baseline_status = get_baseline(...)
-    ...
-    for variant in matrix:
-        resp = requests.get(endpoint, params=variant, ...)
-        diff_len = len(resp.text) - len(baseline_text)
-        print(f"Payload {variant} -> status={resp.status_code}, Δlen={diff_len}")
-Prints baseline status and length.
 
-Iterates through payload variants.
+diff_len = len(resp.text) - len(baseline_text)
+print(f"Payload {variant} -> status={resp.status_code}, Δlen={diff_len}")
+Includes CSRF hints and throttles time-based payloads.
 
-Sends requests with each payload.
+🧠 Heuristics Engine
+Purpose: Interpret anomalies into vulnerability signals.
 
-Compares response length to baseline (Δlen).
+SQL Injection
+Error signature detection
 
-Prints anomalies (status changes, length differences).
+Status code anomalies
 
-Runs CSRF checks.
+Response length diffs
 
-Sleeps briefly to avoid hammering the server.
+Timing anomalies
 
-6. Main Block
+XSS
+Raw payload reflection
+
+<script> context detection
+
+Event attribute injection
+
+CSRF
+Token absence or staleness
+
+Missing Origin/Referer headers
+
+Cookie flags (Secure, SameSite)
+
+📝 Reporter
+Purpose: Generate structured findings and artifacts.
+
+Each finding includes:
+
+Endpoint, method, parameters
+
+Request/response excerpts
+
+Fingerprint evidence
+
+Heuristic signals
+
+Risk score (based on exploitability, impact, confidence)
+
+Outputs
+reports/findings.json — machine-readable
+
+reports/findings.html — human-readable
+
+Reproducible curl commands
+
+🚀 Example Scan
+
+
+
+python src/pipeline.py
+This runs the full pipeline against Juice Shop and generates a populated vulnerability report.
+
+🧱 Modular Architecture
 
 
 
 
-test_url = "http://localhost:8080/rest/products/search"
-test_params = {"q": "test"}
-run_harness(test_url, method="GET", params=test_params)
-Targets the Juice Shop search endpoint.
-
-Baseline query: q=test.
-
-Harness injects payloads into q and observes differences.
+Crawler → Fingerprinter → Harness → HeuristicsEngine → Reporter
+Each module is standalone, testable, and designed for educational reuse. put it into one copy and pastable block

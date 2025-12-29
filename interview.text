@@ -1,0 +1,53 @@
+1. Project Overview  
+“This project is a modular vulnerability scanner I built to analyze web applications like OWASP Juice Shop. The goal was not just to detect issues, but to design a pipeline that’s transparent, reproducible, and educational — so each stage of the scan can be understood and reused.”
+
+2. Architecture  
+“The scanner is broken into five modules, each with a clear responsibility:
+
+Crawler: discovers endpoints, forms, and JavaScript routes using BFS/DFS.
+
+Fingerprinter: collects passive evidence like headers, cookies, scripts, and error signatures.
+
+Harness: injects payloads (SQLi, XSS, CSRF) and compares responses against a baseline.
+
+Heuristics Engine: interprets anomalies into signals — for example, error signatures, timing delays, or payload reflections.
+
+Reporter: merges all evidence into structured findings, calculates risk scores, and generates JSON/HTML reports with reproducible curl commands.”
+
+3. Technical Highlights
+
+Baseline control requests: establish a normal response to compare against injected payloads.
+
+Payload families: error-based, boolean-based, and time-based SQLi; multiple XSS contexts; CSRF token checks.
+
+Evidence tracking: every anomaly is stored with context (diffs, timing stats, fingerprints).
+
+Risk scoring: combines exploitability, impact, and confidence into a weighted score.
+
+Output artifacts: machine-readable JSON and human-readable HTML reports, complete with evidence and reproduction steps.
+
+4. Example Finding  
+“In one run against Juice Shop’s /rest/products/search endpoint, the scanner detected:
+
+An Oracle error message (ORA-00933) confirming SQL injection.
+
+A timing anomaly from a SLEEP(2) payload.
+
+Reflected <script>alert(1)</script> payload confirming XSS.
+
+Cookies missing Secure and SameSite flags.
+All of this was consolidated into a single report entry with a risk score of 2.58.”
+
+5. Why It Matters  
+“This project shows my ability to:
+
+Design modular pipelines that are easy to extend.
+
+Apply security concepts like SQLi, XSS, and CSRF in practice.
+
+Build reproducible, reference-ready artifacts for developers or students.
+
+Balance technical rigor with clarity — making the scanner both a tool and a teaching resource.”
+
+🎯 Closing Line
+“I see this project as both a proof of concept for vulnerability scanning and a teaching artifact. It demonstrates my backend development skills, my security mindset, and my ability to turn complex workflows into something transparent and reusable.”
